@@ -56,7 +56,7 @@ class HackAssembler:
 if __name__ == '__main__':
     """ initializes the I/O files and drives the process """
     if len(sys.argv) != 2:
-        print 'Usage: python HackAssembler.py inputFile.asm'
+        print('Usage: python HackAssembler.py inputFile.asm')
         sys.exit(1)
     else:
         assembler = HackAssembler(filename=sys.argv[1])
