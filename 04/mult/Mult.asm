@@ -9,50 +9,50 @@
 // Put your code here.
 
 	@R0
-	D = M
+	D=M
 	@mul
-	M = D		// mul = RAM[0]
+	M=D		// mul = RAM[0]
 
 	@R1
-	D = M
+	D=M
 	@n
-	M = D		// n = RAM[1]
+	M=D		// n = RAM[1]
 
-//	@R2
-//	M = 0		// RAM[2] = 0
+	@R2
+	M=0		// RAM[2] = 0
 
 	@product
-	M = 0		// product = 0
+	M=0		// product = 0
 
 	@i
-	M = 1		// i = 1
+	M=1		// i = 1
 
 (LOOP)
 	@n
-	D = M
+	D=M
 	@i
-	D = M - D
+	D=M-D
 	@STOP
-	D; JGT		// if i > n goto STOP
+	D;JGT		// if i > n goto STOP
 
 	@mul
-	D = M
+	D=M
 	@product
-	M = M + D	// product = product + mul
+	M=M+D	// product = product + mul
 
 	@i
-	M = M + 1	// i = i + 1
+	M=M+1	// i = i + 1
 
 	@LOOP
-	0; JMP
+	0;JMP
 
 (STOP)
 	@product
-	D = M
+	D=M
 	@R2
-	M = D		// ROM[2] = product
+	M=D		// ROM[2] = product
 
 (END)
 	@END
-	0; JMP
+	0;JMP
 		

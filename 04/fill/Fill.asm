@@ -12,56 +12,56 @@
 // the screen should remain fully clear as long as no key is pressed.
 
 	@last
-	M = 0		// last = 0x0000
+	M=0		// last = 0x0000
 	@state
-	M = 0		// state = 0x0000
+	M=0		// state = 0x0000
 	@SETSCREEN
-	0; JMP
+	0;JMP
 
 (LOOP)
 	@KBD
-	D = M
+	D=M
 	@state
-	M = D		// state = RAM[KBD]
+	M=D		// state = RAM[KBD]
 	@SETSCREEN
-	D; JEQ		// if no key, set screen zeros (white)
+	D;JEQ		// if no key, set screen zeros (white)
 	@state
-	M = -1		// if key pressed, set screen to all 1 bits (black)
+	M=-1		// if key pressed, set screen to all 1 bits (black)
 
 (SETSCREEN)
 	@state
-	D = M
+	D=M
 	@last
-	D = D - M
+	D=D-M
 	@LOOP
-	D; JEQ		// do nothing if new state = old state
+	D;JEQ		// do nothing if new state = old state
 	
 	@state
-	D = M
+	D=M
 	@last
-	M = D		// last = state
+	M=D		// last = state
 
 	@SCREEN
-	D = A
+	D=A
 	@8192
-	D = D + A
-	D = D - 1	// upper limit of screen address
+	D=D+A
+	D=D-1	// upper limit of screen address
 	@i
-	M = D		// i = upper limit of screen address
+	M=D		// i = upper limit of screen address
 
 (SETLOOP)
 	@i
-	D = M
+	D=M
 	@LOOP
-	D; JLT		// if i < 0 goto LOOP
+	D;JLT		// if i < 0 goto LOOP
 
 	@state
-	D = M
+	D=M
 	@i
-	A = M		// A = RAM[i] = value of variable 'i'
-	M = D		// RAM[A] = state
+	A=M		// A = RAM[i] = value of variable 'i'
+	M=D		// RAM[A] = state
 	@i
-	M = M - 1	// i = i -1
+	M=M-1	// i = i -1
 	@SETLOOP
-	0; JMP
+	0;JMP
 	
