@@ -18,7 +18,7 @@ def translate(filename):
 if __name__ == '__main__':
     """Initializes the I/O files and drives the process"""
     if len(sys.argv) != 2:
-        print 'Usage: python VMTranslator.py inputFile.vm'
+        print('Usage: python VMTranslator.py inputFile.vm')
         sys.exit(1)
     else:
         translate(filename = sys.argv[1])
