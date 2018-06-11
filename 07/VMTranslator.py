@@ -1,18 +1,15 @@
-import Parser
-import CodeWriter
-import sys, os, string
+from Parser import *
+from CodeWriter import *
+import sys, os
 
-def translate(filename):
+def translate(parser, codewriter):
     """Translate VM file into assembly file"""
-    parser = Parser.Parser(filename)
-    codewriter = CodeWriter.CodeWriter(filename.replace('.vm', '.asm'))
     while parser.hasMoreCommands():
-        parser.advance()
         if parser.commandType() == 'C_ARITHMETIC':
             codewriter.writeArithmetic(parser.arg1())
         elif parser.commandType() in ['C_PUSH', 'C_POP']:
             codewriter.writePushPop(parser.commandType(), parser.arg1(), parser.arg2())
-    codewriter.close()
+        parser.advance()
 
 
 if __name__ == '__main__':
@@ -21,4 +18,7 @@ if __name__ == '__main__':
         print('Usage: python VMTranslator.py inputFile.vm')
         sys.exit(1)
     else:
-        translate(filename = sys.argv[1])
+        filename = os.path.relpath(sys.argv[1])
+        parser = Parser(filename)
+        codewriter = CodeWriter(filename.replace('.vm', '.asm'))
+        translate(parser, codewriter)

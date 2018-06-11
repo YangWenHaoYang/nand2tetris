@@ -1,84 +1,130 @@
 class CodeWriter:
     """Generates assembly code from the parsed VM command"""
     
+    SEGMENT_TABLE = {'local': 'LCL', 'argument': 'ARG', 'this': 'THIS', 'that': 'THAT'}
+    
     def __init__(self, filename):
         """Opens the output file/stream and gets ready to write into it"""
-        self.outputFile = open(filename, 'w')
+        self.outputfile = open(filename, 'w')
         self.filename = filename.split('.')[0]
-        self.popD = '@SP\nAM=M-1\nD=M\n'
-        self.popA = '@SP\nAM=M-1\nA=M\n'
-        self.pushD = '@SP\nM=M+1\nA=M-1\nM=D\n'
-        self.counter = 0
+        self.line_count = 0
 
+    def writeln(self, content):
+        self.outputfile.write(content + '\n')
+        self.line_count += 1
+              
     def writeArithmetic(self, command):
         """Writes to the output file the assembly code that implements
            the given arithmetic command"""
-        label = self.filename + str(self.counter)
-        codeToWrite = self.popD
-        if command in ['add', 'sub', 'eq', 'gt', 'lt', 'and', 'or']:
-            codeToWrite += self.popA
-            if command == 'add':
-                codeToWrite += 'D=D+A\n'
-            elif command == 'sub':
-                codeToWrite += 'D=A-D\n'
-            elif command == 'eq':
-                codeToWrite += 'D=D-A\n@'+label+'.EQUAL\nD;JEQ\nD=0\n@'+label+'.END\n0;JMP\n('+label+'.EQUAL)\nD=-1\n('+label+'.END)\n'
-            elif command == 'gt':
-                codeToWrite += 'D=A-D\n@'+label+'.GT\nD;JGT\nD=0\n@'+label+'.END\n0;JMP\n('+label+'.GT)\nD=-1\n('+label+'.END)\n'
+        if command in ['not', 'neg']:
+            self.writeln('@SP')
+            self.writeln('A=M-1')
+            if command == 'not':
+                self.writeln('M=!M')
+            else:  # command == 'neg'
+                self.writeln('M=-M')
+            return        
+        self.writeln('@SP')
+        self.writeln('M=M-1')
+        self.writeln('A=M')
+        self.writeln('D=M')
+        self.writeln('A=A-1')
+        if command == 'add':
+            self.writeln('M=D+M')
+        elif command == 'sub':
+            self.writeln('M=M-D')
+        elif command == 'and':
+            self.writeln('M=D&M')
+        elif command == 'or':
+            self.writeln('M=D|M')
+        elif command in ['eq', 'lt', 'gt']:
+            self.writeln('D=M-D')
+            self.writeln('@' + str(self.line_count+7))
+            if command == 'eq':
+                self.writeln('D; JEQ')
             elif command == 'lt':
-                codeToWrite += 'D=A-D\n@'+label+'.LT\nD;JLT\nD=0\n@'+label+'.END\n0;JMP\n('+label+'.LT)\nD=-1\n('+label+'.END)\n'
-            elif command == 'and':
-                codeToWrite += 'D=D&A\n'
-            elif command == 'or':
-                codeToWrite += 'D=D|A\n'
-        else:
-            if command == 'neg':
-                codeToWrite += 'D=-D\n'
-            elif command == 'not':
-                codeToWrite += 'D=!D\n'
-        codeToWrite += self.pushD
-        self.counter += 1
-        self.outputFile.write(codeToWrite)
+                self.writeln('D; JLT')
+            else:  # command == 'gt'
+                self.writeln('D; JGT')
+            self.writeln('@SP')
+            self.writeln('A=M-1')
+            self.writeln('M=0')
+            self.writeln('@' + str(self.line_count+5))
+            self.writeln('0; JMP')
+            self.writeln('@SP')
+            self.writeln('A=M-1')
+            self.writeln('M=-1')
                 
+        
     def writePushPop(self, command, segment, index):
         """Writes to the output file the assembly code that implements
            the given command, where command is either C_PUSH or C_POP"""
-        memMappedSeg = {'argument':'ARG', 'local':'LCL', 'this':'THIS', 'that':'THAT',
-                        'static':self.filename+'.'+str(index)}
-        codeToWrite = ''
+        seg_pt = self.SEGMENT_TABLE.get(segment, None)
         if command == 'C_PUSH':
-            if segment in ['local', 'argument', 'this', 'that', 'static']:
-                codeToWrite += '@'+memMappedSeg[segment]+'\nD=M\n@'+str(index)+'\nA=A+D\nD=M\n'
-            elif segment == 'pointer':
-                if index == '0':
-                    codeToWrite += '@THIS\nD=M\n'
-                elif index == '1':
-                    codeToWrite += '@THAT\nD=M\n'
+            if seg_pt:    # local, argument, this, that
+                self.writeln('@' + seg_pt)
+                self.writeln('D=M')
+                self.writeln('@' + str(index))
+                self.writeln('A=D+A')
+                self.writeln('D=M')             
             elif segment == 'constant':
-                codeToWrite += '@'+str(index)+'\nD=A\n'
+                self.writeln('@' + str(index))
+                self.writeln('D=A')
+            elif segment == 'static':
+                self.writeln('@' + self.filename + '.' + str(index))
+                self.writeln('D=M')
             elif segment == 'temp':
-                codeToWrite += '@'+str(5+int(index))+'\nD=M\n'
-            codeToWrite += self.pushD
-        else:
-            if segment in ['local', 'argument', 'this', 'that', 'static']:
-                codeToWrite += '@'+str(index)+'\nD=A\n@'+memMappedSeg[segment]+'\nA=M\nD=D+A\n@addr\nM=D\n'+self.popD+'@addr\nA=M\nM=D\n'
-            elif segment == 'pointer':
-                codeToWrite += self.popD
+                self.writeln('@' + str(5+index))
+                self.writeln('D=M')
+            else:  # segment == 'pointer'
                 if index == '0':
-                    codeToWrite += '@THIS\nM=D\n'
-                elif index == '1':
-                    codeToWrite += '@THAT\nM=D\n'
+                    self.writeln('@THIS')
+                else:
+                    self.writeln('@THAT')
+                self.writeln('D=M')
+            self.pushD()
+        else:  # command == 'C_POP'
+            if seg_pt:    # local, argument, this, that
+                self.writeln('@' + str(index))
+                self.writeln('D=A')
+                self.writeln('@' + seg_pt)
+                self.writeln('D=D+M')
+                self.writeln('@R13')
+                self.writeln('M=D')
+                self.popD()                
+                self.writeln('@R13')
+                self.writeln('A=M')
+                self.writeln('M=D')
+            elif segment == 'static':
+                self.popD()
+                self.writeln('@' + self.filename + '.' + str(index))
+                self.writeln('M=D')
             elif segment == 'temp':
-                codeToWrite += self.popD+'@'+str(5+int(index))+'\nM=D\n'
-        self.outputFile.write(codeToWrite)
+                self.popD()
+                self.writeln('@' + str(5+index))
+                self.writeln('M=D')
+            else:  # segment == 'pointer'
+                self.popD()
+                if index == 0:
+                    self.writeln('@THIS')
+                else:
+                    self.writeln('@THAT')
+                self.writeln('M=D')
+  
+    def popD(self):
+        self.writeln('@SP')
+        self.writeln('AM=M-1')
+        self.writeln('D=M')
+        
+    def pushD(self):
+        self.writeln('@SP')
+        self.writeln('M=M+1')
+        self.writeln('A=M-1')
+        self.writeln('M=D')
 
     def close(self):
         """Closes the output file"""
-        end = '(END)\n@END\n0; JMP\n'
-        self.outputFile.write(end)
-        self.outputFile.close()
-
-
+        self.outputfile.close()
 
 
 
